@@ -31,7 +31,7 @@ class MLPLayers(nn.Module):
 class ResNetExtractor(nn.Module):
     def __init__(
         self,
-        checkpoint_path: str = None,
+        checkpoint: dict = None,
         scenario: str = "frozen",
         transform: bool = False,
         mlp_layers_units: list = [512, 512, 512],
@@ -58,9 +58,7 @@ class ResNetExtractor(nn.Module):
         )
         self.transform = None
 
-        if checkpoint_path and self.scenario != "supervise":
-            # checkpoint = torch.load(checkpoint_path, map_location=device)
-            checkpoint = torch.hub.load_state_dict_from_url(checkpoint_path, map_location=device)
+        if checkpoint and self.scenario != "supervise":
             self.encoder.load_state_dict(
                 {
                     ".".join(k.split(".")[1:]): v
