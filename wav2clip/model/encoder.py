@@ -5,8 +5,6 @@ from torch import nn
 from .resnet import BasicBlock
 from .resnet import ResNet
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class MLPLayers(nn.Module):
     def __init__(self, units=[512, 512, 512], nonlin=nn.ReLU(), dropout=0.1):
@@ -66,7 +64,6 @@ class ResNetExtractor(nn.Module):
                     if k.startswith("audio_encoder")
                 }
             )
-            self.encoder.to(device)
             if self.scenario == "frozen":
                 self.encoder.eval()
             else:
@@ -84,7 +81,6 @@ class ResNetExtractor(nn.Module):
                         if k.startswith("audio_transform")
                     }
                 )
-                self.transform.to(device)
                 if self.scenario == "frozen":
                     self.transform.eval()
                 else:
@@ -99,7 +95,7 @@ class ResNetExtractor(nn.Module):
             feature = self.encoder(
                 torch.swapaxes(torch.from_numpy(frames), 1, 2)
                 .reshape(batch_size * frame_num, frame_size)
-                .to(device)
+                .to(next(self.encoder.parameters()).device)
             )
             _, embedding_size = feature.shape
             if self.transform:
