@@ -20,8 +20,9 @@ def get_model(device='cpu', pretrained=True, frame_length=None, hop_length=None)
         model = ResNetExtractor(scenario='supervise',
                                 frame_length=frame_length,
                                 hop_length=hop_length)
+    model.to(device)
     return model
 
 
 def get_audio_embedding(audio, model):
-    return model(audio)
+    return model(torch.from_numpy(audio).unsqueeze(0).to(next(model.parameters()).device)).detach().cpu().numpy()
