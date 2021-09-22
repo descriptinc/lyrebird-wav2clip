@@ -1,1 +1,1 @@
-# lyrebird-wav2clip
+# Wav2CLIP

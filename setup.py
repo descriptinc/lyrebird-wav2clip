@@ -36,8 +36,7 @@ setup(
         "representation learning",
         "wav2clip",
     ],
-    install_requires=[
-    ],
+    install_requires=[],
     extras_require={
         "tests": ["pytest", "pytest-cov"],
     },
