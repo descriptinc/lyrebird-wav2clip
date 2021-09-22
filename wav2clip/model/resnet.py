@@ -78,7 +78,6 @@ class ResNet(nn.Module):
         self,
         block,
         layers,
-        num_classes=1000,
         pool="avgpool",
         zero_init_residual=False,
         groups=1,
@@ -126,13 +125,6 @@ class ResNet(nn.Module):
         if self.pool == "avgpool":
             self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-            self.fc = nn.Linear(512 * block.expansion, num_classes)  # 8192
-        elif self.pool == "vlad":
-            self.avgpool = NetVLAD()
-            self.fc_ = nn.Linear(8192 * block.expansion, num_classes)
-
-        self.softmax = nn.Softmax(dim=-1)
-
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
@@ -145,9 +137,7 @@ class ResNet(nn.Module):
         # This improves the model by 0.2~0.3% according to https://arxiv.org/abs/1706.02677
         if zero_init_residual:
             for m in self.modules():
-                if isinstance(m, Bottleneck):
-                    nn.init.constant_(m.bn3.weight, 0)
-                elif isinstance(m, BasicBlock):
+                if isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
     def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
@@ -207,120 +197,4 @@ class ResNet(nn.Module):
         x = self.layer4(x)
         x = self.avgpool(x)
         x = x.reshape(x.size(0), -1)
-        # if self.pool == 'avgpool':
-        #     x = self.fc(x)
-        # elif self.pool == 'vlad':
-        #     x = self.fc_(x)
         return x
-
-
-class NetVLAD(nn.Module):
-    """NetVLAD layer implementation"""
-
-    def __init__(self, num_clusters=16, dim=512, alpha=100.0, normalize_input=True):
-        """
-        Args:
-            num_clusters : int
-                The number of clusters
-            dim : int
-                Dimension of descriptors
-            alpha : float
-                Parameter of initialization. Larger value is harder assignment.
-            normalize_input : bool
-                If true, descriptor-wise L2 normalization is applied to input.
-        """
-        super(NetVLAD, self).__init__()
-        self.num_clusters = num_clusters
-        self.dim = dim
-        self.alpha = alpha
-        self.normalize_input = normalize_input
-        self.conv = nn.Conv2d(dim, num_clusters, kernel_size=(1, 1), bias=True)
-        self.centroids = nn.Parameter(torch.rand(num_clusters, dim))
-        self._init_params()
-
-    def _init_params(self):
-        self.conv.weight = nn.Parameter(
-            (2.0 * self.alpha * self.centroids).unsqueeze(-1).unsqueeze(-1)
-        )
-        self.conv.bias = nn.Parameter(-self.alpha * self.centroids.norm(dim=1))
-
-    def forward(self, x):
-        N, C = x.shape[:2]
-
-        if self.normalize_input:
-            x = F.normalize(x, p=2, dim=1)  # across descriptor dim
-
-        # soft-assignment
-        soft_assign = self.conv(x).view(N, self.num_clusters, -1)
-        soft_assign = F.softmax(soft_assign, dim=1)
-
-        x_flatten = x.view(N, C, -1)
-
-        # calculate residuals to each clusters
-        residual = x_flatten.expand(self.num_clusters, -1, -1, -1).permute(
-            1, 0, 2, 3
-        ) - self.centroids.expand(x_flatten.size(-1), -1, -1).permute(
-            1, 2, 0
-        ).unsqueeze(
-            0
-        )
-        residual *= soft_assign.unsqueeze(2)
-        vlad = residual.sum(dim=-1)
-
-        vlad = F.normalize(vlad, p=2, dim=2)  # intra-normalization
-        vlad = vlad.view(x.size(0), -1)  # flatten
-        vlad = F.normalize(vlad, p=2, dim=1)  # L2 normalize
-
-        return vlad
-
-
-class Bottleneck(nn.Module):
-    expansion = 4
-
-    def __init__(
-        self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        groups=1,
-        base_width=64,
-        dilation=1,
-        norm_layer=None,
-    ):
-        super(Bottleneck, self).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        width = int(planes * (base_width / 64.0)) * groups
-        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = conv1x1(inplanes, width)
-        self.bn1 = norm_layer(width)
-        self.conv2 = conv3x3(width, width, stride, groups, dilation)
-        self.bn2 = norm_layer(width)
-        self.conv3 = conv1x1(width, planes * self.expansion)
-        self.bn3 = norm_layer(planes * self.expansion)
-        self.relu = nn.ReLU(inplace=True)
-        self.downsample = downsample
-        self.stride = stride
-
-    def forward(self, x):
-        identity = x
-
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu(out)
-
-        out = self.conv3(out)
-        out = self.bn3(out)
-
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        out += identity
-        out = self.relu(out)
-
-        return out

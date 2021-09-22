@@ -26,7 +26,7 @@ def get_model(device="cpu", pretrained=True, frame_length=None, hop_length=None)
     return model
 
 
-def get_audio_embedding(audio, model):
+def embed_audio(audio, model):
     return (
         model(torch.from_numpy(audio).unsqueeze(0).to(next(model.parameters()).device))
         .detach()

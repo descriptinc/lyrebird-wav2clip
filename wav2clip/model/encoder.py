@@ -46,7 +46,6 @@ class ResNetExtractor(nn.Module):
         self.encoder = ResNet(
             BasicBlock,
             [2, 2, 2, 2],
-            num_classes=309,
             pool="avgpool",
             zero_init_residual=False,
             groups=1,
