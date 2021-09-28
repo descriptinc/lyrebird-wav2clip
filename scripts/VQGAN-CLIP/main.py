@@ -1,13 +1,14 @@
-import os
-
-os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
-
+import glob
 import subprocess
+from subprocess import PIPE
+from subprocess import Popen
+
 import librosa
 from PIL import Image
-import glob
-from subprocess import Popen, PIPE
 from tqdm import tqdm
+
+# import os
+# os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 
 
 def generate_image_slides(audio_file, out_file_prefix, frame_size=16000, hop_size=1600):
