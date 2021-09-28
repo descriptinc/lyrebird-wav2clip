@@ -365,8 +365,8 @@ vq_parser.add_argument(
 # Execute the parse_args() method
 args = vq_parser.parse_args()
 
-if not args.prompts and not args.image_prompts:
-    args.prompts = "A cute, smiling, Nerdy Rodent"
+# if not args.prompts and not args.image_prompts:
+#     args.prompts = "A cute, smiling, Nerdy Rodent"
 
 if args.cudnn_determinism:
     torch.backends.cudnn.deterministic = True
@@ -1017,12 +1017,14 @@ if args.audio_prompts:
     import librosa
     import wav2clip
 
-    model = wav2clip.get_model()
+    wav2clip_model = wav2clip.get_model()
     audio, sr = librosa.load(args.audio_prompts, sr=args.audio_sampling_freq)
     if args.audio_index and args.audio_frame_length and args.audio_hop_length:
         start = args.audio_hop_length * args.audio_index
         audio = audio[start : start + args.audio_frame_length]
-    embed = wav2clip.embed_audio(np.expand_dims(audio, axis=0), model)
+    embed = torch.from_numpy(
+        wav2clip.embed_audio(np.expand_dims(audio, axis=0), wav2clip_model)
+    ).to(device)
     pMs = []
     pMs.append(Prompt(embed, float(1.0), float("-inf")).to(device))
 

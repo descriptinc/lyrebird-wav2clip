@@ -11,7 +11,7 @@ from tqdm import tqdm
 # os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 
 
-def generate_image_slides(audio_file, out_file_prefix, frame_size=16000, hop_size=1600):
+def generate_image_slides(audio_file, out_file_prefix, frame_size=None, hop_size=None):
     audio, sr = librosa.load(audio_file, sr=16000)
     if frame_size and hop_size:
         num_frames = int(audio.shape[0] / hop_size) - 1
@@ -22,6 +22,8 @@ def generate_image_slides(audio_file, out_file_prefix, frame_size=16000, hop_siz
                     [
                         "python",
                         "generate.py",
+                        "-p",
+                        "",
                         "-ap",
                         audio_file,
                         "-aframe",
@@ -39,6 +41,8 @@ def generate_image_slides(audio_file, out_file_prefix, frame_size=16000, hop_siz
                     [
                         "python",
                         "generate.py",
+                        "-p",
+                        "",
                         "-ap",
                         audio_file,
                         "-ahop",
@@ -58,6 +62,8 @@ def generate_image_slides(audio_file, out_file_prefix, frame_size=16000, hop_siz
             [
                 "python",
                 "generate.py",
+                "-p",
+                "",
                 "-ap",
                 audio_file,
                 "-o",
