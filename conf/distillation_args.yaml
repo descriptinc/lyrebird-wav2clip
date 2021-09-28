@@ -1,0 +1,11 @@
+num_gpus: 4
+batch_size: 128
+learning_rate: 0.001
+lr_scheduler_patience: 5
+early_stopping_patience: 10
+optimizer: 'Adam'
+num_workers: 16
+random_state: 2021
+loss: 'clip_loss'
+MLPLayers.units: [512, 512, 512]
+MLPLayers.dropout: 0.1
