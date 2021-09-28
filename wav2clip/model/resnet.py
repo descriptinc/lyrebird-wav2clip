@@ -124,6 +124,7 @@ class ResNet(nn.Module):
         )
         if self.pool == "avgpool":
             self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+            self.fc = nn.Linear(512 * block.expansion, 309)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
