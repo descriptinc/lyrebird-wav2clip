@@ -78,6 +78,26 @@ vq_parser.add_argument(
     dest="image_prompts",
 )
 vq_parser.add_argument(
+    "-ap",
+    "--audio_prompts",
+    type=str,
+    help="Audio file as prompts",
+    default=[],
+    dest="audio_prompts",
+)
+vq_parser.add_argument(
+    "-ai", "--audio_index", type=int, default=None, dest="audio_index"
+)
+vq_parser.add_argument(
+    "-aframe", "--audio_frame_length", type=int, default=None, dest="audio_frame_length"
+)
+vq_parser.add_argument(
+    "-ahop", "--audio_hop_length", type=int, default=None, dest="audio_hop_length"
+)
+vq_parser.add_argument(
+    "-asf", "--audio_sampling_freq", type=int, default=16000, dest="audio_sampling_freq"
+)
+vq_parser.add_argument(
     "-i",
     "--iterations",
     type=int,
@@ -992,6 +1012,19 @@ if args.prompts:
         txt, weight, stop = split_prompt(prompt)
         embed = perceptor.encode_text(clip.tokenize(txt).to(device)).float()
         pMs.append(Prompt(embed, weight, stop).to(device))
+
+if args.audio_prompts:
+    import librosa
+    import wav2clip
+
+    model = wav2clip.get_model()
+    audio, sr = librosa.load(args.audio_prompts, sr=args.audio_sampling_freq)
+    if args.audio_index and args.audio_frame_length and args.audio_hop_length:
+        start = args.audio_hop_length * args.audio_index
+        audio = audio[start : start + args.audio_frame_length]
+    embed = wav2clip.embed_audio(np.expand_dims(audio, axis=0), model)
+    pMs = []
+    pMs.append(Prompt(embed, float(1.0), float("-inf")).to(device))
 
 for prompt in args.image_prompts:
     path, weight, stop = split_prompt(prompt)
