@@ -59,7 +59,7 @@ class ResNetExtractor(nn.Module):
             self.encoder.load_state_dict(
                 {
                     ".".join(k.split(".")[1:]): v
-                    for k, v in checkpoint["state_dict"].items()
+                    for k, v in checkpoint.items()
                     if k.startswith("audio_encoder")
                 }
             )
@@ -76,7 +76,7 @@ class ResNetExtractor(nn.Module):
                 self.transform.load_state_dict(
                     {
                         ".".join(k.split(".")[1:]): v
-                        for k, v in checkpoint["state_dict"].items()
+                        for k, v in checkpoint.items()
                         if k.startswith("audio_transform")
                     }
                 )

@@ -1,9 +1,10 @@
+import numpy as np
 import torch
 
 from .model.encoder import ResNetExtractor
 
 
-MODEL_URL = "https://www.dropbox.com/s/94fqdi4lgi8vu19/ResNet_CX.ckpt?dl=1"
+MODEL_URL = "https://www.dropbox.com/s/t3ews3k65n3atnh/Wav2CLIP.pt?dl=1"
 
 
 def get_model(device="cpu", pretrained=True, frame_length=None, hop_length=None):
@@ -27,6 +28,8 @@ def get_model(device="cpu", pretrained=True, frame_length=None, hop_length=None)
 
 
 def embed_audio(audio, model):
+    if len(audio.shape) == 1:
+        audio = np.expand_dims(audio, axis=0)
     return (
         model(torch.from_numpy(audio).to(next(model.parameters()).device))
         .detach()
