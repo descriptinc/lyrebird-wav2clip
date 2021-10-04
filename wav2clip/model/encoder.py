@@ -1,4 +1,5 @@
 import librosa
+import numpy as np
 import torch
 from torch import nn
 
@@ -87,9 +88,17 @@ class ResNetExtractor(nn.Module):
 
     def forward(self, x):
         if self.frame_length and self.hop_length:
-            frames = librosa.util.frame(
-                x.cpu().numpy(), self.frame_length, self.hop_length
-            )
+            if x.shape[0] == 1:
+                frames = np.expand_dims(
+                    librosa.util.frame(
+                        x.cpu().numpy()[0], self.frame_length, self.hop_length
+                    ),
+                    axis=0,
+                )
+            else:
+                frames = librosa.util.frame(
+                    x.cpu().numpy(), self.frame_length, self.hop_length
+                )
             batch_size, frame_size, frame_num = frames.shape
             feature = self.encoder(
                 torch.swapaxes(torch.from_numpy(frames), 1, 2)
