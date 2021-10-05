@@ -4,7 +4,7 @@ import torch
 from .model.encoder import ResNetExtractor
 
 
-MODEL_URL = "https://www.dropbox.com/s/t3ews3k65n3atnh/Wav2CLIP.pt?dl=1"
+MODEL_URL = "https://github.com/descriptinc/lyrebird-wav2clip/releases/download/v0.1.0-alpha/Wav2CLIP.pt"
 
 
 def get_model(device="cpu", pretrained=True, frame_length=None, hop_length=None):

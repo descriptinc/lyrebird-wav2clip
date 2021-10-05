@@ -1022,9 +1022,7 @@ if args.audio_prompts:
     if args.audio_index and args.audio_frame_length and args.audio_hop_length:
         start = args.audio_hop_length * args.audio_index
         audio = audio[start : start + args.audio_frame_length]
-    embed = torch.from_numpy(
-        wav2clip.embed_audio(np.expand_dims(audio, axis=0), wav2clip_model)
-    ).to(device)
+    embed = torch.from_numpy(wav2clip.embed_audio(audio, wav2clip_model)).to(device)
     pMs = []
     pMs.append(Prompt(embed, float(1.0), float("-inf")).to(device))
 
