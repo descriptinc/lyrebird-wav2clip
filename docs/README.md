@@ -1,9 +1,11 @@
-# Wav2CLIP
+# WAV2CLIP: LEARNING ROBUST AUDIO REPRESENTATIONS FROM CLIP
 
-## UMAP Visualizations of Various Audio Classification Tasks
+Ho-Hsiang Wu, Prem Seetharaman, Kundan Kumar, Juan Pablo Bello
+[:page_facing_up:](https://arxiv.org/abs/2110.11499) [:octocat:](https://github.com/descriptinc/lyrebird-wav2clip)
 
-<div><img src="artifacts/umap/umap_urbansound8k.png" alt="UMAP UrbanSound8K" width="400" style="background-color:#FFFFFF"/><img src="artifacts/umap/umap_esc50.png" alt="UMAP ESC-50" width="400" style="background-color:#FFFFFF"/></div>
-<div><img src="artifacts/umap/umap_vggsound.png" alt="UMAP VGGSound" width="400" style="background-color:#FFFFFF"/><img src="artifacts/umap/umap_tau.png" alt="UMAP TAU" width="400" style="background-color:#FFFFFF"/></div>
+## Abstract
+
+We propose Wav2CLIP, a robust audio representation learning method by distilling from Contrastive Language-Image Pre-training (CLIP). We systematically evaluate Wav2CLIP on a variety of audio tasks including classification, retrieval, and generation, and show that Wav2CLIP can outperform several publicly available pre-trained audio representation algorithms. Wav2CLIP projects audio into a shared embedding space with images and text, which enables multimodal applications such as zero-shot classification, and cross-modal retrieval. Furthermore, Wav2CLIP needs just ~10% of the data to achieve competitive performance on downstream tasks compared with fully supervised models, and is more efficient to pre-train than competing methods as it does not require learning a visual model in concert with an auditory model. Finally, we demonstrate image generation from Wav2CLIP as qualitative assessment of the shared embedding space. Our code and model weights are open sourced and made available for further applications.
 
 ## VQGAN-CLIP Generate Samples
 
@@ -32,3 +34,8 @@
 <div><span style="width: 200px; text-align: center; display: inline-block;">Siren</span><span style="width: 200px; text-align: center; display: inline-block;">Car_horn</span><span style="width: 200px; text-align: center; display: inline-block;">Dog</span><span style="width: 200px; text-align: center; display: inline-block;">Crying_baby</span></div>
 <div><img src="artifacts/esc50/2-43806-A-42-siren.png" alt="2-43806-A-42" width="200"/><img src="artifacts/esc50/2-54086-A-43-car_horn.png" alt="2-54086-A-43" width="200"/><img src="artifacts/esc50/2-116400-A-0-dog.png" alt="2-116400-A-0" width="200"/><img src="artifacts/esc50/1-22694-A-20-crying_baby.png" alt="1-22694-A-20" width="200"/></div>
 <div><audio controls style="width: 200px;" src="artifacts/esc50/2-43806-A-42.wav"></audio><audio controls style="width: 200px;" src="artifacts/esc50/2-54086-A-43.wav"></audio><audio controls style="width: 200px;" src="artifacts/esc50/2-116400-A-0.wav"></audio><audio controls style="width: 200px;" src="artifacts/esc50/1-22694-A-20.wav"></audio></div>
+
+## UMAP Visualizations of Various Audio Classification Tasks
+
+<div><img src="artifacts/umap/umap_urbansound8k.png" alt="UMAP UrbanSound8K" width="400" style="background-color:#FFFFFF"/><img src="artifacts/umap/umap_esc50.png" alt="UMAP ESC-50" width="400" style="background-color:#FFFFFF"/></div>
+<div><img src="artifacts/umap/umap_vggsound.png" alt="UMAP VGGSound" width="400" style="background-color:#FFFFFF"/><img src="artifacts/umap/umap_tau.png" alt="UMAP TAU" width="400" style="background-color:#FFFFFF"/></div>
