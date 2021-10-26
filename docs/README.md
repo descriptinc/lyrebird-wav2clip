@@ -1,7 +1,7 @@
-# WAV2CLIP: LEARNING ROBUST AUDIO REPRESENTATIONS FROM CLIP
+# WAV2CLIP
 
 Ho-Hsiang Wu, Prem Seetharaman, Kundan Kumar, Juan Pablo Bello
-[:page_facing_up:](https://arxiv.org/abs/2110.11499) [:octocat:](https://github.com/descriptinc/lyrebird-wav2clip)
+<div><a href="https://arxiv.org/abs/2110.11499"><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f4c4.png" alt=":page_facing_up:" style="width: 32px;"></a><a href="https://github.com/descriptinc/lyrebird-wav2clip"><img src="https://github.githubassets.com/images/icons/emoji/octocat.png" alt=":octocat:" style="width: 32px;"></a></div>
 
 ## Abstract
 
