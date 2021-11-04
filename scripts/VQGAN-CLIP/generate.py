@@ -85,18 +85,25 @@ vq_parser.add_argument(
     default=[],
     dest="audio_prompts",
 )
+
+
 vq_parser.add_argument(
-    "-ai", "--audio_index", type=int, default=None, dest="audio_index"
+    "-ai", "--audio_index", type=int, default=1, dest="audio_index"
 )
 vq_parser.add_argument(
-    "-aframe", "--audio_frame_length", type=int, default=None, dest="audio_frame_length"
+    "-aframe", "--audio_frame_length", type=float, default=None, dest="audio_frame_length"
 )
 vq_parser.add_argument(
-    "-ahop", "--audio_hop_length", type=int, default=None, dest="audio_hop_length"
+    "-ahop", "--audio_hop_length", type=float, default=None, dest="audio_hop_length"
 )
 vq_parser.add_argument(
     "-asf", "--audio_sampling_freq", type=int, default=16000, dest="audio_sampling_freq"
 )
+
+vq_parser.add_argument(
+    "--slide_every", type=int, default=16000, dest="slide_every"
+)
+
 vq_parser.add_argument(
     "-i",
     "--iterations",
@@ -1019,12 +1026,18 @@ if args.audio_prompts:
 
     wav2clip_model = wav2clip.get_model()
     audio, sr = librosa.load(args.audio_prompts, sr=args.audio_sampling_freq)
-    if args.audio_index and args.audio_frame_length and args.audio_hop_length:
-        start = args.audio_hop_length * args.audio_index
-        audio = audio[start : start + args.audio_frame_length]
-    embed = torch.from_numpy(wav2clip.embed_audio(audio, wav2clip_model)).to(device)
     pMs = []
-    pMs.append(Prompt(embed, float(1.0), float("-inf")).to(device))
+    if args.audio_index==-1:
+        args.audio_index = (len(audio)-args.audio_frame_length)/args.audio_hop_length
+    for sl in range(int(args.audio_index)):
+        start = int(args.audio_hop_length*args.audio_sampling_freq * sl)
+        end = start + int(args.audio_sampling_freq*args.audio_frame_length)
+        if end < len(audio):
+            audio = audio[start : end]
+            embed = torch.from_numpy(wav2clip.embed_audio(audio, wav2clip_model)).to(device)
+            pMs.append(Prompt(embed, float(1.0), float("-inf")).to(device))
+
+    print('Audio prompts',len(pMs))
 
 for prompt in args.image_prompts:
     path, weight, stop = split_prompt(prompt)
@@ -1131,8 +1144,10 @@ def ascend_txt():
             / 2
         )
 
-    for prompt in pMs:
-        result.append(prompt(iii))
+
+    ix = i // ( args.max_iterations / len(pMs) )
+    ix = int(min(ix,len(pMs)-1))
+    result.append(pMs[ix](iii))
 
     if args.make_video:
         img = np.array(
