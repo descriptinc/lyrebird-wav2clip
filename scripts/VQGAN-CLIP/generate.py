@@ -1,54 +1,57 @@
 # Copied and modified from https://github.com/nerdyrodent/VQGAN-CLIP/blob/4f380fc8ebd2d1993b6603cb583db36d6101142b/generate.py
 # Originally made by Katherine Crowson (https://github.com/crowsonkb, https://twitter.com/RiversHaveWings)
 # The original BigGAN+CLIP method was by https://twitter.com/advadnoun
+import warnings
+import re
+from subprocess import Popen, PIPE
+from PIL import ImageFile, Image, PngImagePlugin, ImageChops
+import imageio
+import numpy as np
+import kornia.augmentation as K
+from CLIP import clip
+from torch_optimizer import DiffGrad, AdamP, RAdam
+from torch.cuda import get_device_properties
+from torchvision.transforms import functional as TF
+from torchvision import transforms
+from torch.nn import functional as F
+from torch import nn, optim
+import torch
+
+if True:
+    import sys
+    sys.path.append("taming-transformers")
+
+from taming.models import cond_transformer, vqgan
+from omegaconf import OmegaConf
 import argparse
 import math
 import os
 import random
-import sys
-from urllib.request import urlopen
 
+from urllib.request import urlopen
+from IPython import embed
 from tqdm import tqdm
 
 # from email.policy import default
 
 # pip install taming-transformers doesn't work with Gumbel, but does not yet work with coco etc
 # appending the path does work with Gumbel, but gives ModuleNotFoundError: No module named 'transformers' for coco etc
-sys.path.append("taming-transformers")
 
-from omegaconf import OmegaConf
-from taming.models import cond_transformer, vqgan
 
 # import taming.modules
 
-import torch
-from torch import nn, optim
-from torch.nn import functional as F
-from torchvision import transforms
-from torchvision.transforms import functional as TF
-from torch.cuda import get_device_properties
 
 torch.backends.cudnn.benchmark = (
-    False  # NR: True is a bit faster, but can lead to OOM. False is more deterministic.
+    # NR: True is a bit faster, but can lead to OOM. False is more deterministic.
+    False
 )
 # torch.use_deterministic_algorithms(True)	# NR: grid_sampler_2d_backward_cuda does not have a deterministic implementation
 
-from torch_optimizer import DiffGrad, AdamP, RAdam
-
-from CLIP import clip
-import kornia.augmentation as K
-import numpy as np
-import imageio
-
-from PIL import ImageFile, Image, PngImagePlugin, ImageChops
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-from subprocess import Popen, PIPE
-import re
 
 # Supress warnings
-import warnings
 
 warnings.filterwarnings("ignore")
 
@@ -63,7 +66,8 @@ elif (
     default_image_size = 318  # <8GB VRAM
 
 # Create the parser
-vq_parser = argparse.ArgumentParser(description="Image generation using VQGAN+CLIP")
+vq_parser = argparse.ArgumentParser(
+    description="Image generation using VQGAN+CLIP")
 
 # Add the arguments
 vq_parser.add_argument(
@@ -462,7 +466,8 @@ def ramp(ratio, width):
 def zoom_at(img, x, y, zoom):
     w, h = img.size
     zoom2 = zoom * 2
-    img = img.crop((x - w / zoom2, y - h / zoom2, x + w / zoom2, y + h / zoom2))
+    img = img.crop((x - w / zoom2, y - h / zoom2,
+                   x + w / zoom2, y + h / zoom2))
     return img.resize((w, h), Image.LANCZOS)
 
 
@@ -488,7 +493,8 @@ def gradient_3d(width, height, start_list, stop_list, is_horizontal_list):
     for i, (start, stop, is_horizontal) in enumerate(
         zip(start_list, stop_list, is_horizontal_list)
     ):
-        result[:, :, i] = gradient_2d(start, stop, width, height, is_horizontal)
+        result[:, :, i] = gradient_2d(
+            start, stop, width, height, is_horizontal)
 
     return result
 
@@ -588,7 +594,8 @@ class Prompt(nn.Module):
     def forward(self, input):
         input_normed = F.normalize(input.unsqueeze(1), dim=2)
         embed_normed = F.normalize(self.embed.unsqueeze(0), dim=2)
-        dists = input_normed.sub(embed_normed).norm(dim=2).div(2).arcsin().pow(2).mul(2)
+        dists = input_normed.sub(embed_normed).norm(
+            dim=2).div(2).arcsin().pow(2).mul(2)
         dists = dists * self.weight.sign()
         return (
             self.weight.abs()
@@ -599,7 +606,7 @@ class Prompt(nn.Module):
 # NR: Split prompts and weights
 def split_prompt(prompt):
     vals = prompt.rsplit(":", 2)
-    vals = vals + ["", "1", "-inf"][len(vals) :]
+    vals = vals + ["", "1", "-inf"][len(vals):]
     return vals[0], float(vals[1]), float(vals[2])
 
 
@@ -622,9 +629,11 @@ class MakeCutouts(nn.Module):
             elif item == "Sh":
                 augment_list.append(K.RandomSharpness(sharpness=0.3, p=0.5))
             elif item == "Gn":
-                augment_list.append(K.RandomGaussianNoise(mean=0.0, std=1.0, p=0.5))
+                augment_list.append(
+                    K.RandomGaussianNoise(mean=0.0, std=1.0, p=0.5))
             elif item == "Pe":
-                augment_list.append(K.RandomPerspective(distortion_scale=0.7, p=0.7))
+                augment_list.append(K.RandomPerspective(
+                    distortion_scale=0.7, p=0.7))
             elif item == "Ro":
                 augment_list.append(K.RandomRotation(degrees=15, p=0.7))
             elif item == "Af":
@@ -642,7 +651,8 @@ class MakeCutouts(nn.Module):
                 augment_list.append(K.RandomElasticTransform(p=0.7))
             elif item == "Ts":
                 augment_list.append(
-                    K.RandomThinPlateSpline(scale=0.8, same_on_batch=True, p=0.7)
+                    K.RandomThinPlateSpline(
+                        scale=0.8, same_on_batch=True, p=0.7)
                 )
             elif item == "Cr":
                 augment_list.append(
@@ -695,7 +705,8 @@ class MakeCutouts(nn.Module):
         batch = self.augs(torch.cat(cutouts, dim=0))
 
         if self.noise_fac:
-            facs = batch.new_empty([self.cutn, 1, 1, 1]).uniform_(0, self.noise_fac)
+            facs = batch.new_empty([self.cutn, 1, 1, 1]
+                                   ).uniform_(0, self.noise_fac)
             batch = batch + facs * torch.randn_like(batch)
         return batch
 
@@ -709,10 +720,12 @@ class MakeCutoutsPoolingUpdate(nn.Module):
         self.cut_pow = cut_pow  # Not used with pooling
 
         self.augs = nn.Sequential(
-            K.RandomAffine(degrees=15, translate=0.1, p=0.7, padding_mode="border"),
+            K.RandomAffine(degrees=15, translate=0.1,
+                           p=0.7, padding_mode="border"),
             K.RandomPerspective(0.7, p=0.7),
             K.ColorJitter(hue=0.1, saturation=0.1, p=0.7),
-            K.RandomErasing((0.1, 0.4), (0.3, 1 / 0.3), same_on_batch=True, p=0.7),
+            K.RandomErasing((0.1, 0.4), (0.3, 1 / 0.3),
+                            same_on_batch=True, p=0.7),
         )
 
         self.noise_fac = 0.1
@@ -732,7 +745,8 @@ class MakeCutoutsPoolingUpdate(nn.Module):
         batch = self.augs(torch.cat(cutouts, dim=0))
 
         if self.noise_fac:
-            facs = batch.new_empty([self.cutn, 1, 1, 1]).uniform_(0, self.noise_fac)
+            facs = batch.new_empty([self.cutn, 1, 1, 1]
+                                   ).uniform_(0, self.noise_fac)
             batch = batch + facs * torch.randn_like(batch)
         return batch
 
@@ -758,9 +772,11 @@ class MakeCutoutsNRUpdate(nn.Module):
             elif item == "Sh":
                 augment_list.append(K.RandomSharpness(sharpness=0.3, p=0.5))
             elif item == "Gn":
-                augment_list.append(K.RandomGaussianNoise(mean=0.0, std=1.0, p=0.5))
+                augment_list.append(
+                    K.RandomGaussianNoise(mean=0.0, std=1.0, p=0.5))
             elif item == "Pe":
-                augment_list.append(K.RandomPerspective(distortion_scale=0.5, p=0.7))
+                augment_list.append(K.RandomPerspective(
+                    distortion_scale=0.5, p=0.7))
             elif item == "Ro":
                 augment_list.append(K.RandomRotation(degrees=15, p=0.7))
             elif item == "Af":
@@ -778,7 +794,8 @@ class MakeCutoutsNRUpdate(nn.Module):
                 augment_list.append(K.RandomElasticTransform(p=0.7))
             elif item == "Ts":
                 augment_list.append(
-                    K.RandomThinPlateSpline(scale=0.8, same_on_batch=True, p=0.7)
+                    K.RandomThinPlateSpline(
+                        scale=0.8, same_on_batch=True, p=0.7)
                 )
             elif item == "Cr":
                 augment_list.append(
@@ -818,15 +835,18 @@ class MakeCutoutsNRUpdate(nn.Module):
         cutouts = []
         for _ in range(self.cutn):
             size = int(
-                torch.rand([]) ** self.cut_pow * (max_size - min_size) + min_size
+                torch.rand([]) ** self.cut_pow *
+                (max_size - min_size) + min_size
             )
             offsetx = torch.randint(0, sideX - size + 1, ())
             offsety = torch.randint(0, sideY - size + 1, ())
-            cutout = input[:, :, offsety : offsety + size, offsetx : offsetx + size]
+            cutout = input[:, :, offsety: offsety +
+                           size, offsetx: offsetx + size]
             cutouts.append(resample(cutout, (self.cut_size, self.cut_size)))
         batch = self.augs(torch.cat(cutouts, dim=0))
         if self.noise_fac:
-            facs = batch.new_empty([self.cutn, 1, 1, 1]).uniform_(0, self.noise_fac)
+            facs = batch.new_empty([self.cutn, 1, 1, 1]
+                                   ).uniform_(0, self.noise_fac)
             batch = batch + facs * torch.randn_like(batch)
         return batch
 
@@ -843,7 +863,8 @@ class MakeCutoutsUpdate(nn.Module):
             K.ColorJitter(hue=0.01, saturation=0.01, p=0.7),
             # K.RandomSolarize(0.01, 0.01, p=0.7),
             K.RandomSharpness(0.3, p=0.4),
-            K.RandomAffine(degrees=30, translate=0.1, p=0.8, padding_mode="border"),
+            K.RandomAffine(degrees=30, translate=0.1,
+                           p=0.8, padding_mode="border"),
             K.RandomPerspective(0.2, p=0.4),
         )
         self.noise_fac = 0.1
@@ -855,15 +876,18 @@ class MakeCutoutsUpdate(nn.Module):
         cutouts = []
         for _ in range(self.cutn):
             size = int(
-                torch.rand([]) ** self.cut_pow * (max_size - min_size) + min_size
+                torch.rand([]) ** self.cut_pow *
+                (max_size - min_size) + min_size
             )
             offsetx = torch.randint(0, sideX - size + 1, ())
             offsety = torch.randint(0, sideY - size + 1, ())
-            cutout = input[:, :, offsety : offsety + size, offsetx : offsetx + size]
+            cutout = input[:, :, offsety: offsety +
+                           size, offsetx: offsetx + size]
             cutouts.append(resample(cutout, (self.cut_size, self.cut_size)))
         batch = self.augs(torch.cat(cutouts, dim=0))
         if self.noise_fac:
-            facs = batch.new_empty([self.cutn, 1, 1, 1]).uniform_(0, self.noise_fac)
+            facs = batch.new_empty([self.cutn, 1, 1, 1]
+                                   ).uniform_(0, self.noise_fac)
             batch = batch + facs * torch.randn_like(batch)
         return batch
 
@@ -883,11 +907,13 @@ class MakeCutoutsOrig(nn.Module):
         cutouts = []
         for _ in range(self.cutn):
             size = int(
-                torch.rand([]) ** self.cut_pow * (max_size - min_size) + min_size
+                torch.rand([]) ** self.cut_pow *
+                (max_size - min_size) + min_size
             )
             offsetx = torch.randint(0, sideX - size + 1, ())
             offsety = torch.randint(0, sideY - size + 1, ())
-            cutout = input[:, :, offsety : offsety + size, offsetx : offsetx + size]
+            cutout = input[:, :, offsety: offsety +
+                           size, offsetx: offsetx + size]
             cutouts.append(resample(cutout, (self.cut_size, self.cut_size)))
         return clamp_with_grad(torch.cat(cutouts, dim=0), 0, 1)
 
@@ -906,7 +932,8 @@ def load_vqgan_model(config_path, checkpoint_path):
         model.init_from_ckpt(checkpoint_path)
         gumbel = True
     elif config.model.target == "taming.models.cond_transformer.Net2NetTransformer":
-        parent_model = cond_transformer.Net2NetTransformer(**config.model.params)
+        parent_model = cond_transformer.Net2NetTransformer(
+            **config.model.params)
         parent_model.eval().requires_grad_(False)
         parent_model.init_from_ckpt(checkpoint_path)
         model = parent_model.first_stage_model
@@ -928,7 +955,8 @@ device = torch.device(args.cuda_device)
 model = load_vqgan_model(args.vqgan_config, args.vqgan_checkpoint).to(device)
 jit = True if float(torch.__version__[:3]) < 1.8 else False
 perceptor = (
-    clip.load(args.clip_model, jit=jit)[0].eval().requires_grad_(False).to(device)
+    clip.load(args.clip_model, jit=jit)[
+        0].eval().requires_grad_(False).to(device)
 )
 
 # clock=deepcopy(perceptor.visual.positional_embedding.data)
@@ -947,9 +975,11 @@ elif args.cut_method == "original":
 elif args.cut_method == "updated":
     make_cutouts = MakeCutoutsUpdate(cut_size, args.cutn, cut_pow=args.cut_pow)
 elif args.cut_method == "nrupdated":
-    make_cutouts = MakeCutoutsNRUpdate(cut_size, args.cutn, cut_pow=args.cut_pow)
+    make_cutouts = MakeCutoutsNRUpdate(
+        cut_size, args.cutn, cut_pow=args.cut_pow)
 else:
-    make_cutouts = MakeCutoutsPoolingUpdate(cut_size, args.cutn, cut_pow=args.cut_pow)
+    make_cutouts = MakeCutoutsPoolingUpdate(
+        cut_size, args.cutn, cut_pow=args.cut_pow)
 
 toksX, toksY = args.size[0] // f, args.size[1] // f
 sideX, sideY = toksX * f, toksY * f
@@ -963,8 +993,10 @@ if gumbel:
 else:
     e_dim = model.quantize.e_dim
     n_toks = model.quantize.n_e
-    z_min = model.quantize.embedding.weight.min(dim=0).values[None, :, None, None]
-    z_max = model.quantize.embedding.weight.max(dim=0).values[None, :, None, None]
+    z_min = model.quantize.embedding.weight.min(
+        dim=0).values[None, :, None, None]
+    z_max = model.quantize.embedding.weight.max(
+        dim=0).values[None, :, None, None]
 
 
 if args.init_image:
@@ -1027,17 +1059,18 @@ if args.audio_prompts:
     wav2clip_model = wav2clip.get_model()
     audio, sr = librosa.load(args.audio_prompts, sr=args.audio_sampling_freq)
     pMs = []
-    if args.audio_index==-1:
-        args.audio_index = (len(audio)-args.audio_frame_length)/args.audio_hop_length
+    if args.audio_index == -1:
+        args.audio_index = (len(audio)-int(args.audio_frame_length*args.audio_sampling_freq)
+                            )/int(args.audio_hop_length*args.audio_sampling_freq)
     for sl in range(int(args.audio_index)):
         start = int(args.audio_hop_length*args.audio_sampling_freq * sl)
         end = start + int(args.audio_sampling_freq*args.audio_frame_length)
         if end < len(audio):
-            audio = audio[start : end]
-            embed = torch.from_numpy(wav2clip.embed_audio(audio, wav2clip_model)).to(device)
+            embed = torch.from_numpy(wav2clip.embed_audio(
+                audio[start: end], wav2clip_model)).to(device)
             pMs.append(Prompt(embed, float(1.0), float("-inf")).to(device))
 
-    print('Audio prompts',len(pMs))
+    print('Audio prompts', len(pMs))
 
 for prompt in args.image_prompts:
     path, weight, stop = split_prompt(prompt)
@@ -1050,7 +1083,8 @@ for prompt in args.image_prompts:
 
 for seed, weight in zip(args.noise_prompt_seeds, args.noise_prompt_weights):
     gen = torch.Generator().manual_seed(seed)
-    embed = torch.empty([1, perceptor.visual.output_dim]).normal_(generator=gen)
+    embed = torch.empty([1, perceptor.visual.output_dim]
+                        ).normal_(generator=gen)
     pMs.append(Prompt(embed, weight).to(device))
 
 
@@ -1144,14 +1178,15 @@ def ascend_txt():
             / 2
         )
 
-
-    ix = i // ( args.max_iterations / len(pMs) )
-    ix = int(min(ix,len(pMs)-1))
+    ix = i // (args.max_iterations / len(pMs))
+    ix = int(min(ix, len(pMs)-1))
+    # print(i, ix, len(pMs)-1)
     result.append(pMs[ix](iii))
 
     if args.make_video:
         img = np.array(
-            out.mul(255).clamp(0, 255)[0].cpu().detach().numpy().astype(np.uint8)
+            out.mul(255).clamp(0, 255)[0].cpu(
+            ).detach().numpy().astype(np.uint8)
         )[:, :, :]
         img = np.transpose(img, (1, 2, 0))
         imageio.imwrite("./steps/" + str(i) + ".png", np.array(img))
@@ -1204,7 +1239,8 @@ try:
                         .astype(np.uint8)
                     )[:, :, :]
                     img = np.transpose(img, (1, 2, 0))
-                    imageio.imwrite("./steps/" + str(j) + ".png", np.array(img))
+                    imageio.imwrite("./steps/" + str(j) +
+                                    ".png", np.array(img))
 
                     # Time to start zooming?
                     if args.zoom_start <= i:
@@ -1235,7 +1271,9 @@ try:
                         pil_tensor = TF.to_tensor(pil_image_zoom)
 
                         # Re-encode
-                        z, *_ = model.encode(pil_tensor.to(device).unsqueeze(0) * 2 - 1)
+                        z, * \
+                            _ = model.encode(pil_tensor.to(
+                                device).unsqueeze(0) * 2 - 1)
                         z_orig = z.clone()
                         z.requires_grad_(True)
 
@@ -1330,11 +1368,14 @@ try:
                         # Load and resize image
                         img = Image.open(args.init_image)
                         pil_image = img.convert("RGB")
-                        pil_image = pil_image.resize((sideX, sideY), Image.LANCZOS)
+                        pil_image = pil_image.resize(
+                            (sideX, sideY), Image.LANCZOS)
                         pil_tensor = TF.to_tensor(pil_image)
 
                         # Re-encode
-                        z, *_ = model.encode(pil_tensor.to(device).unsqueeze(0) * 2 - 1)
+                        z, * \
+                            _ = model.encode(pil_tensor.to(
+                                device).unsqueeze(0) * 2 - 1)
                         z_orig = z.clone()
                         z.requires_grad_(True)
 
@@ -1355,7 +1396,8 @@ if args.make_video or args.make_zoom_video:
         last_frame = j
     else:
         last_frame = (
-            i  # This will raise an error if that number of frames does not exist.
+            # This will raise an error if that number of frames does not exist.
+            i
         )
 
     length = args.video_length  # Desired time of the video in seconds
