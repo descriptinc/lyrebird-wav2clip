@@ -1,7 +1,5 @@
 # Wav2CLIP
 
-:construction: WIP :construction:
-
 Official implementation of the paper WAV2CLIP: LEARNING ROBUST AUDIO REPRESENTATIONS FROM CLIP [:page_facing_up:](https://arxiv.org/abs/2110.11499) [:link:](https://descriptinc.github.io/lyrebird-wav2clip)
 
 Ho-Hsiang Wu, Prem Seetharaman, Kundan Kumar, Juan Pablo Bello
@@ -30,4 +28,21 @@ import wav2clip
 
 model = wav2clip.get_model(frame_length=16000, hop_length=16000)
 embeddings = wav2clip.embed_audio(audio, model)
+```
+
+## Replicate
+
+We also provide more examples through [Replicate](https://replicate.com/hohsiangwu/wav2clip).
+
+## Citation
+
+### BibTeX
+
+```
+@inproceedings{wu2022wav2clip,
+    title={Wav2CLIP: Learning Robust Audio Representations From CLIP},
+    author={Wu, Ho-Hsiang and Seetharaman, Prem and Kumar, Kundan and Bello, Juan Pablo},
+    booktitle={ICASSP 2022 - 2022 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+    year={2022}
+}
 ```

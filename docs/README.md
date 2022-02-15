@@ -35,6 +35,10 @@ We propose Wav2CLIP, a robust audio representation learning method by distilling
 <div><img src="artifacts/esc50/2-43806-A-42-siren.png" alt="2-43806-A-42" width="200"/><img src="artifacts/esc50/2-54086-A-43-car_horn.png" alt="2-54086-A-43" width="200"/><img src="artifacts/esc50/2-116400-A-0-dog.png" alt="2-116400-A-0" width="200"/><img src="artifacts/esc50/1-22694-A-20-crying_baby.png" alt="1-22694-A-20" width="200"/></div>
 <div><audio controls style="width: 200px;" src="artifacts/esc50/2-43806-A-42.wav"></audio><audio controls style="width: 200px;" src="artifacts/esc50/2-54086-A-43.wav"></audio><audio controls style="width: 200px;" src="artifacts/esc50/2-116400-A-0.wav"></audio><audio controls style="width: 200px;" src="artifacts/esc50/1-22694-A-20.wav"></audio></div>
 
+## Replicate
+
+We also provide more examples through [Replicate](https://replicate.com/hohsiangwu/wav2clip).
+
 ## UMAP Visualizations of Various Audio Classification Tasks
 
 <div><img src="artifacts/umap/umap_urbansound8k.png" alt="UMAP UrbanSound8K" width="400" style="background-color:#FFFFFF"/><img src="artifacts/umap/umap_esc50.png" alt="UMAP ESC-50" width="400" style="background-color:#FFFFFF"/></div>
